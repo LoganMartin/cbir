@@ -1,7 +1,11 @@
 #container {
-    width: 760px;
+    width: 1020px;
     padding: 19px 29px 29px;
     margin: 50px auto 20px;
+}
+
+#load-button {
+    margin-top: 20px;
 }
 
 #input-form {
