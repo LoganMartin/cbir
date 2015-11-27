@@ -10,7 +10,9 @@
         <title>CBIR Project</title>
         <meta name="description" content="Content Based Image Retrieval System">
         <meta name="author" content="Logan Martin">
-
+        
+        <link rel="stylesheet" type="text/css" href="css/bootstrap.min.css">
+        <link rel="stylesheet" type="text/css" href="css/bootstrap-theme.min.css">
         <link rel="stylesheet" type="text/css" href="css/upload.css">
     </head>
 
@@ -33,15 +35,18 @@
                     <p id="image-info-width"></p>
                 </div>
             </div>
+            <div id="matching-progress-bar" class="progress hidden">
+                <div id="match-bar" class="progress-bar progress-bar-info progress-bar-striped" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%">
+                    <span class="sr-only">0% Complete</span>
+                </div>
+            </div>
             <div id="compare-container">
-                <canvas id="myCompareCanvas" class="hiddend"></canvas>
+                <canvas id="myCompareCanvas" class="hidden"></canvas>
             </div>
             <div id="match-container"></div>
         </div>
         <script src='js/jquery-2.1.4.min.js'></script>
-        <script src='js/Memory.js'></script>
-        <script src='js/LBP.js'></script>
-        
+        <script src='js/bootstrap.min.js'></script>
         <script src='js/import.js'></script>
     </body>
 </html>

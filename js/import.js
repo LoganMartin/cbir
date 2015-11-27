@@ -6,6 +6,8 @@ function loadImage() {
     var img = new Image();
     var matches = [];
     $("#match-container").html("");
+    $("#matching-progress-bar").removeClass("hidden");
+    $(".progress-bar-striped").addClass("active");
     
     img.src = "imageDB/" + filename;
     img.onload = function(){
@@ -24,15 +26,23 @@ function loadImage() {
         convertCanvasToGreyscale(ctx);
         qLBP = getLBPHistogram(ctx);
         convertCanvasToGreyscale(compctx);
-        compareDBImage(ctx, qLBP, 0, matches);
+        findMatchingImages(ctx, qLBP, 0, matches);
 
     };
 }
 
 
-function compareDBImage(ctx, qLBP, imgNum, matches) {
+function findMatchingImages(ctx, qLBP, imgNum, matches) {
     if(imgNum >= 1000) {
         $("#myCompareCanvas").addClass("hidden");
+        
+        $("#matching-progress-bar").addClass("hidden");
+        progress = 0;
+        $("#match-bar").attr({
+            'aria-valuenow': progress,
+            'style': 'width: ' + progress + '%'
+        });
+        
         console.log({matching: matches});
         for(var i=0; i<matches.length; i++) {
             var image = "<img src='imageDB/" + matches[i] + ".jpg' width='25%' height='25%'>";
@@ -54,17 +64,23 @@ function compareDBImage(ctx, qLBP, imgNum, matches) {
         convertCanvasToGreyscale(compctx);
         dbLBP = getLBPHistogram(compctx);
         var difference = compareLBPHistograms(qLBP, dbLBP);
-        var match = true;
+        var matchingCells = 9;
+        console.log({image: imgNum-1});
         for(var i=0; i<difference.length; i++) {
             if(difference[i] > thresh) {
-                match = false;
+                matchingCells--;
             }
         }
-        if(match) {
+        if(matchingCells>7) {
             matches.push(imgNum-1);
         }
-        
-        compareDBImage(ctx, qLBP, imgNum, matches);
+        var progress = (imgNum/10).toFixed(0);
+        console.log({progress: progress});
+        $("#match-bar").attr({
+            'aria-valuenow': progress,
+            'style': 'width: ' + progress + '%'
+        });
+        findMatchingImages(ctx, qLBP, imgNum, matches);
     }; 
 }
 
