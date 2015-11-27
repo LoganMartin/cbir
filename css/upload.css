@@ -1,0 +1,38 @@
+#container {
+    width: 760px;
+    padding: 19px 29px 29px;
+    margin: 50px auto 20px;
+}
+
+#input-form {
+    margin: 15px 15px 30px;
+    text-align:center;
+}
+
+#image-container {
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+#image-info {
+    display:inline-block;
+    vertical-align: top;
+    padding-left: 100px;
+}
+
+#image-info h2 {
+    margin-top: 0px;
+    text-decoration: underline;
+}
+
+#image-info p {
+    text-align: left;
+}
+
+#image-info.hidden{
+    display: none;
+}
+
+.hidden {
+    display: none;
+}
