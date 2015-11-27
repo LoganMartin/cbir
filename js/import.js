@@ -4,6 +4,8 @@ function loadImage() {
     var ctx = document.getElementById('myCanvas').getContext("2d");
     var compctx = document.getElementById("myCompareCanvas").getContext("2d");
     var img = new Image();
+    var matches = [];
+    $("#match-container").html("");
     
     img.src = "imageDB/" + filename;
     img.onload = function(){
@@ -16,38 +18,75 @@ function loadImage() {
         $("#image-info-width").html("<b>Width:</b> " + img.width + "px");
         $("#image-info").removeClass("hidden");
         
-        //contrastImage(ctx, 30);
+        //contrastImage(ctx, 5);
+        //contrastImage(compctx, 5);
         //getColorMoment(ctx);
-        //convertCanvasToGreyscale(ctx);
-        //qLBP = getLBPHistogram(ctx);
-        //convertCanvasToGreyscale(compctx);
-        /*qLBP = new LBP();
-        dbLBP = new LBP();
-        
-        //get image data
-        var imgData = ctx.getImageData(0,0,ctx.canvas.width,ctx.canvas.height);
-        var qData = new Array(ctx.canvas.width);
-        for (var i = 0; i < imgData.data.length; i+=4) {
-            var coord = getCanvasCoordinates(i, ctx.canvas.width);
-            if (!qData[coord.x]) qData[coord.x] = new Array(ctx.canvas.height);
+        convertCanvasToGreyscale(ctx);
+        qLBP = getLBPHistogram(ctx);
+        convertCanvasToGreyscale(compctx);
+        compareDBImage(ctx, qLBP, 0, matches);
 
-            // change to grayscale
-            var grayValue = Math.floor(imgData.data[i] * 0.3 + imgData.data[i + 1] * 0.59 + imgData.data[i + 2] * 0.11);
-            imgData.data[i] = imgData.data[i + 1] = imgData.data[i + 2] = grayValue;
-
-            qData[coord.x][coord.y] = grayValue;
-        }
-        ctx.putImageData(imgData, 0, 0);
-        console.log(qLBP.distribution(qData));*/
-        
-        dbLBP = getLBPHistogram(compctx);
-        console.log(dbLBP);
-        console.log(qLBP);
-        console.log(compareLBPHistograms(qLBP, dbLBP));
-        //console.log(LBPHist);   
     };
 }
 
+
+function compareDBImage(ctx, qLBP, imgNum, matches) {
+    if(imgNum >= 1000) {
+        $("#myCompareCanvas").addClass("hidden");
+        console.log({matching: matches});
+        for(var i=0; i<matches.length; i++) {
+            var image = "<img src='imageDB/" + matches[i] + ".jpg' width='25%' height='25%'>";
+            $("#match-container").append(image);
+        }
+        
+        return;
+    }
+    var thresh = 0.5;
+    var img = new Image();
+    img.src = "imageDB/" + imgNum + ".jpg";
+    imgNum++;
+    
+    var compctx = document.getElementById("myCompareCanvas").getContext("2d");
+    img.onload = function(){
+        compctx.canvas.height = img.height;
+        compctx.canvas.width = img.width;       
+        compctx.drawImage(img, 0, 0);
+        convertCanvasToGreyscale(compctx);
+        dbLBP = getLBPHistogram(compctx);
+        var difference = compareLBPHistograms(qLBP, dbLBP);
+        var match = true;
+        for(var i=0; i<difference.length; i++) {
+            if(difference[i] > thresh) {
+                match = false;
+            }
+        }
+        if(match) {
+            matches.push(imgNum-1);
+        }
+        
+        compareDBImage(ctx, qLBP, imgNum, matches);
+    }; 
+}
+
+
+function loadDBImages(callback) {
+    var imgs = [],
+        loaded = 0,
+        length = 10,
+        i;
+        
+    for(i=0; i<length; i++) {
+        (function (i) {
+           var img = new Image();
+           img.onload = function() {
+             imgs[i] = img;
+             loaded++;
+             if(loaded === length) callback(imgs);  
+           };
+           img.src = 'imageDB/' + i + '.jpg'; 
+        }(i));
+    }
+}
 
 function getColorMoment(ctx) {
     var imgData = ctx.getImageData(0,0,ctx.canvas.width,ctx.canvas.height);
@@ -172,18 +211,23 @@ function getCentralPixelLBP(cp, px, wdt) {
 
 
 function compareLBPHistograms(qHist, dbHist) {
-    var distance = 0;
+    var distance = [];
+    var totalDist = 0;
+    for(var j=0; j<9; j++) {
+        distance[j] = 0;
+    }
     var diff = 0;
     for(var i=0; i<qHist.length; i++) {
         for(var j=0; j<qHist[i].length; j++) {
             diff = qHist[i][j] - dbHist[i][j];
-            diff = Math.pow(2,diff);
-            diff = Math.pow(0.5,diff);
-            distance += diff;
-            if(diff > 0.5)
-                console.log({i: i, j: j, q: qHist[i][j], db: dbHist[i][j], diff: diff, dist: distance});    
-        }        
+            diff = Math.pow(diff,2);
+            diff = Math.pow(diff,0.5);
+            distance[i] += diff;
+            totalDist += diff;   
+        }
+        console.log(distance[i]);        
     }
+    console.log({totalDistance: totalDist});
     return distance;
 }
 
@@ -252,15 +296,9 @@ function contrastImage(ctx, contrast) {
 function getPixelPercentage(data, totalPixels) {
     for(var i=0; i<data.length; i++) {
         for(var j=0; j<data[i].length; j++) {
-            data[i][j] = parseFloat(((data[i][j] / totalPixels)*100).toFixed(10));   
+            data[i][j] = parseFloat((data[i][j] / totalPixels).toFixed(10));   
         }        
     }
     
     return data;
-}
-
-function getCanvasCoordinates(n, width) {
-    var x = (n / 4) % width
-        , y = (n / 4 - x ) / width;
-    return { x: x, y: y };
 }

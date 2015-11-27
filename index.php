@@ -33,23 +33,15 @@
                     <p id="image-info-width"></p>
                 </div>
             </div>
-            <canvas id="myCompareCanvas" class="hiddend"></canvas>
+            <div id="compare-container">
+                <canvas id="myCompareCanvas" class="hiddend"></canvas>
+            </div>
+            <div id="match-container"></div>
         </div>
         <script src='js/jquery-2.1.4.min.js'></script>
         <script src='js/Memory.js'></script>
         <script src='js/LBP.js'></script>
-        <script>
-            $(document).ready(function() {
-                var ctx = document.getElementById("myCompareCanvas").getContext("2d");
-                var img = new Image();
-                img.src = "imageDB/200.jpg";
-                img.onload = function(){
-                    ctx.canvas.height = img.height;
-                    ctx.canvas.width = img.width;       
-                    ctx.drawImage(img, 0, 0);
-                };
-            });
-        </script>
+        
         <script src='js/import.js'></script>
     </body>
 </html>
