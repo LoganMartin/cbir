@@ -24,6 +24,10 @@
         <div id="container">
             <div id="input-form">
                 <input id="imagePath" type="file" class="form-control" placeholder="Enter File Path Here...">
+                <select id="filter-type">
+                    <option value="lbp">Local Binary Pattern</option>
+                    <option value="cm">Color Moment</option>
+                </select>
                 <button id="load-button" class="btn btn-large btn-primary" onclick="loadImage()">Load</button>
             </div>
             <div id="image-container">

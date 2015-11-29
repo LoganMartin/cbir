@@ -20,14 +20,23 @@ function loadImage() {
         $("#image-info-width").html("<b>Width:</b> " + img.width + "px");
         $("#image-info").removeClass("hidden");
         
+        switch($("#filter-type").val()) {
+            case "lbp":
+                convertCanvasToGreyscale(ctx);
+                qLBP = getLBPHistogram(ctx);
+                findMatchingImages(ctx, qLBP, 0, matches);
+                break;
+            case "cm":
+                var qCM = getColorMoment(ctx);
+                findColorMatches(ctx, qCM, 0, matches);
+                break;
+            default:
+                alert("Error: invalid search filter");
+                break;
+        }
+        
         //contrastImage(ctx, 5);
         //contrastImage(compctx, 5);
-        //getColorMoment(ctx);
-        convertCanvasToGreyscale(ctx);
-        qLBP = getLBPHistogram(ctx);
-        convertCanvasToGreyscale(compctx);
-        findMatchingImages(ctx, qLBP, 0, matches);
-
     };
 }
 
@@ -85,23 +94,56 @@ function findMatchingImages(ctx, qLBP, imgNum, matches) {
 }
 
 
-function loadDBImages(callback) {
-    var imgs = [],
-        loaded = 0,
-        length = 10,
-        i;
+function findColorMatches(ctx, qCM, imgNum, matches) {
+    if(imgNum >= 1000) {
+        $("#myCompareCanvas").addClass("hidden");
         
-    for(i=0; i<length; i++) {
-        (function (i) {
-           var img = new Image();
-           img.onload = function() {
-             imgs[i] = img;
-             loaded++;
-             if(loaded === length) callback(imgs);  
-           };
-           img.src = 'imageDB/' + i + '.jpg'; 
-        }(i));
+        $("#matching-progress-bar").addClass("hidden");
+        progress = 0;
+        $("#match-bar").attr({
+            'aria-valuenow': progress,
+            'style': 'width: ' + progress + '%'
+        });
+        
+        console.log({matching: matches});
+        for(var i=0; i<matches.length; i++) {
+            var image = "<img src='imageDB/" + matches[i] + ".jpg' width='25%' height='25%'>";
+            $("#match-container").append(image);
+        }
+        
+        return;
     }
+    var thresh = 0.1;
+    var img = new Image();
+    img.src = "imageDB/" + imgNum + ".jpg";
+    imgNum++;
+    
+    var compctx = document.getElementById("myCompareCanvas").getContext("2d");
+    img.onload = function(){
+        compctx.canvas.height = img.height;
+        compctx.canvas.width = img.width;       
+        compctx.drawImage(img, 0, 0);
+        dbCM = getColorMoment(compctx);
+        var difference = compareColorMoments(qCM, dbCM);
+        var match = true;
+        console.log({image: imgNum-1});
+        for(var i=0; i<difference.length; i++) {
+            if(difference[i] > thresh) {
+                match=false;
+                break;
+            }
+        }
+        if(match) {
+            matches.push(imgNum-1);
+        }
+        var progress = (imgNum/10).toFixed(0);
+        console.log({progress: progress});
+        $("#match-bar").attr({
+            'aria-valuenow': progress,
+            'style': 'width: ' + progress + '%'
+        });
+        findColorMatches(ctx, qCM, imgNum, matches);
+    }; 
 }
 
 function getColorMoment(ctx) {
@@ -109,9 +151,10 @@ function getColorMoment(ctx) {
     var px = imgData.data;
     var height = ctx.canvas.height;
     var width = ctx.canvas.width;
+    var hsv = [], colorMoment = [];
     var x=0, y=0;
     for(var i=0; i < px.length; i+=4) {
-        var hsv = rgb2hsv(px[i],px[i+1],px[i+2]);
+        hsv.push(rgb2hsv(px[i],px[i+1],px[i+2]));
         
         //console.log(i + ": " + hsv);
         if(x>=width) {
@@ -121,11 +164,81 @@ function getColorMoment(ctx) {
         
         
         
-        ctx.fillStyle = 'hsl(' + hsv[0] + ',' + hsv[1] + "%," + hsv[2] + "%)";
-        ctx.fillRect(x,y,1,1);
+        //ctx.fillStyle = 'hsl(' + hsv[0] + ',' + hsv[1] + "%," + hsv[2] + "%)";
+        //ctx.fillRect(x,y,1,1);
         x++;
     }
-    //convertCanvasToGreyscale(ctx);
+    var means = getColorMeans(hsv);
+    //console.log(means);
+    var stdDevs = getColorStdDeviation(hsv, means);
+    var skewness = getColorSkewness(hsv, means);
+    colorMoment = means.concat(stdDevs.concat(skewness));
+    return colorMoment;
+}
+
+function getColorMeans(hsv) {
+    var hMean = 0,
+        sMean = 0,
+        vMean = 0;
+    
+    for(var i=0; i<hsv.length; i++) {
+        hMean +=hsv[i][0];
+        sMean +=hsv[i][1];
+        vMean +=hsv[i][2];
+    }
+    
+    return [
+        hMean/hsv.length,
+        sMean/hsv.length,
+        vMean/hsv.length
+    ];
+}
+
+function getColorStdDeviation(hsv, means) {
+    var hStdDev = 0,
+        sStdDev = 0,
+        vStdDev = 0;
+        
+    for(var i=0; i<hsv.length; i++) {
+        hStdDev += Math.pow(hsv[i][0]-means[0],2);
+        sStdDev += Math.pow(hsv[i][1]-means[2],2);
+        vStdDev += Math.pow(hsv[i][2]-means[2],2);
+    }
+    
+    return [
+        Math.sqrt(hStdDev/hsv.length),
+        Math.sqrt(sStdDev/hsv.length),
+        Math.sqrt(vStdDev/hsv.length)
+    ];
+}
+
+function getColorSkewness(hsv, means)  {
+    var hSkew = 0,
+        sSkew = 0,
+        vSkew = 0;
+        
+    for(var i=0; i<hsv.length; i++) {
+        hSkew += Math.pow(hsv[i][0]-means[0],3);
+        sSkew += Math.pow(hsv[i][1]-means[2],3);
+        vSkew += Math.pow(hsv[i][2]-means[2],3);
+    }
+    
+    //Convert to positive, if we have a negative number, then divide by total pixels
+    hSkew *= hSkew;
+    hSkew = Math.pow(hSkew,0.5);    
+    hSkew = hSkew/hsv.length;
+    sSkew *= sSkew;
+    sSkew = Math.pow(sSkew,0.5);
+    sSkew = sSkew/hsv.length;
+    vSkew *= vSkew;
+    vSkew = Math.pow(vSkew,0.5);
+    vSkew = vSkew/hsv.length;
+    
+    return [
+        Math.pow(hSkew, 1/3),
+        Math.pow(sSkew, 1/3),
+        Math.pow(vSkew, 1/3)
+    ];
 }
 
 function convertCanvasToGreyscale(ctx) {
@@ -225,6 +338,22 @@ function getCentralPixelLBP(cp, px, wdt) {
     return lbp;
 }
 
+function compareColorMoments(qCM, dbCM) {
+    var distance = [],
+        totalDist = 0,
+        diff = 0;
+        
+    for(var i=0; i<qCM.length; i++) {
+        diff = qCM[i] - dbCM[i];
+        diff *= diff;
+        diff = Math.pow(diff,0.5);
+        distance[i] = diff;
+        totalDist += diff;
+        console.log(distance[i]);
+    }
+    console.log({totalDistance: totalDist});
+    return distance;
+}
 
 function compareLBPHistograms(qHist, dbHist) {
     var distance = [];
@@ -241,9 +370,9 @@ function compareLBPHistograms(qHist, dbHist) {
             distance[i] += diff;
             totalDist += diff;   
         }
-        console.log(distance[i]);        
+        //console.log(distance[i]);        
     }
-    console.log({totalDistance: totalDist});
+    //console.log({totalDistance: totalDist});
     return distance;
 }
 
@@ -288,9 +417,9 @@ function rgb2hsv(r,g,b) {
         }
     }
     return [
-        Math.round(hue * 360),
-        Math.round(sat * 100),
-        Math.round(val * 100)
+        hue,
+        sat,
+        val
     ];
 }
 
