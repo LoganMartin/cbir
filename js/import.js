@@ -2,12 +2,10 @@ function loadImage() {
     var fullPath = $("#imagePath").val();
     var filename = fullPath.replace(/^.*[\\\/]/, '');
     var ctx = document.getElementById('myCanvas').getContext("2d");
-    var compctx = document.getElementById("myCompareCanvas").getContext("2d");
     var img = new Image();
     var matches = [];
-    $("#match-container").html("");
-    $("#matching-progress-bar").removeClass("hidden");
-    $(".progress-bar-striped").addClass("active");
+    
+    $("#queried-image").html("<img src='imageDB/" + filename + "'>");
     
     img.src = "imageDB/" + filename;
     img.onload = function(){
@@ -23,15 +21,21 @@ function loadImage() {
         switch($("#filter-type").val()) {
             case "lbp":
                 convertCanvasToGreyscale(ctx);
-                qLBP = getLBPHistogram(ctx);
-                findMatchingImages(ctx, qLBP, 0, matches);
+                var qLBP = getLBPHistogram(ctx);
+                matches = findLBPMatches(qLBP, 0, matches);
                 break;
             case "cm":
                 var qCM = getColorMoment(ctx);
-                findColorMatches(ctx, qCM, 0, matches);
+                matches = findColorMatches(qCM, 0, matches);
                 break;
+            case "both":
+                var cmMatches = [];
+                var qCM = getColorMoment(ctx);
+                convertCanvasToGreyscale(ctx);
+                var qLBP = getLBPHistogram(ctx);
+                matches = findComboMatches(qLBP, qCM, 0, matches, cmMatches);
             default:
-                alert("Error: invalid search filter");
+                //alert("Error: invalid search filter");
                 break;
         }
         
@@ -41,25 +45,25 @@ function loadImage() {
 }
 
 
-function findMatchingImages(ctx, qLBP, imgNum, matches) {
+function findLBPMatches(qLBP, imgNum, matches) {
     if(imgNum >= 1000) {
-        $("#myCompareCanvas").addClass("hidden");
-        
         $("#matching-progress-bar").addClass("hidden");
-        progress = 0;
         $("#match-bar").attr({
-            'aria-valuenow': progress,
-            'style': 'width: ' + progress + '%'
+            'aria-valuenow': 0,
+            'style': 'width: ' + 0 + '%'
         });
-        
-        console.log({matching: matches});
         for(var i=0; i<matches.length; i++) {
             var image = "<img src='imageDB/" + matches[i] + ".jpg' width='25%' height='25%'>";
             $("#match-container").append(image);
         }
+        $("#match-container").removeClass("hidden");
         
-        return;
+        console.log({matching: matches});
+        return matches;
     }
+    $("#match-container").html("");
+    $("#matching-progress-bar").removeClass("hidden");
+    $(".progress-bar-striped").addClass("active");
     var thresh = 0.5;
     var img = new Image();
     img.src = "imageDB/" + imgNum + ".jpg";
@@ -74,7 +78,7 @@ function findMatchingImages(ctx, qLBP, imgNum, matches) {
         dbLBP = getLBPHistogram(compctx);
         var difference = compareLBPHistograms(qLBP, dbLBP);
         var matchingCells = 9;
-        console.log({image: imgNum-1});
+        //console.log({image: imgNum-1});
         for(var i=0; i<difference.length; i++) {
             if(difference[i] > thresh) {
                 matchingCells--;
@@ -84,35 +88,35 @@ function findMatchingImages(ctx, qLBP, imgNum, matches) {
             matches.push(imgNum-1);
         }
         var progress = (imgNum/10).toFixed(0);
-        console.log({progress: progress});
+        //console.log({progress: progress});
         $("#match-bar").attr({
             'aria-valuenow': progress,
             'style': 'width: ' + progress + '%'
         });
-        findMatchingImages(ctx, qLBP, imgNum, matches);
+        findLBPMatches(qLBP, imgNum, matches);
     }; 
 }
 
 
-function findColorMatches(ctx, qCM, imgNum, matches) {
+function findColorMatches(qCM, imgNum, matches) {
     if(imgNum >= 1000) {
-        $("#myCompareCanvas").addClass("hidden");
-        
         $("#matching-progress-bar").addClass("hidden");
-        progress = 0;
         $("#match-bar").attr({
-            'aria-valuenow': progress,
-            'style': 'width: ' + progress + '%'
+            'aria-valuenow': 0,
+            'style': 'width: ' + 0 + '%'
         });
-        
-        console.log({matching: matches});
         for(var i=0; i<matches.length; i++) {
             var image = "<img src='imageDB/" + matches[i] + ".jpg' width='25%' height='25%'>";
             $("#match-container").append(image);
         }
+        $("#match-container").removeClass("hidden");
         
-        return;
+        console.log({matching: matches});
+        return matches;
     }
+    $("#match-container").html("");
+    $("#matching-progress-bar").removeClass("hidden");
+    $(".progress-bar-striped").addClass("active");
     var thresh = 0.1;
     var img = new Image();
     img.src = "imageDB/" + imgNum + ".jpg";
@@ -126,7 +130,7 @@ function findColorMatches(ctx, qCM, imgNum, matches) {
         dbCM = getColorMoment(compctx);
         var difference = compareColorMoments(qCM, dbCM);
         var match = true;
-        console.log({image: imgNum-1});
+        //console.log({image: imgNum-1});
         for(var i=0; i<difference.length; i++) {
             if(difference[i] > thresh) {
                 match=false;
@@ -137,13 +141,95 @@ function findColorMatches(ctx, qCM, imgNum, matches) {
             matches.push(imgNum-1);
         }
         var progress = (imgNum/10).toFixed(0);
+        //console.log({progress: progress});
+        $("#match-bar").attr({
+            'aria-valuenow': progress,
+            'style': 'width: ' + progress + '%'
+        });
+        findColorMatches(qCM, imgNum, matches);
+    }; 
+}
+
+//Would have prefered to do without the repeat code from the above two functions,
+//but due to the way javascript handles it's onloads/closure, it's a real pain to work with
+//those functions synchronously
+function findComboMatches(qLBP, qCM, imgNum, lbpMatches, cmMatches) {
+    var comboMatches = [];
+    if(imgNum >= 1000) {
+        $("#matching-progress-bar").addClass("hidden");
+        $("#match-bar").attr({
+            'aria-valuenow': 0,
+            'style': 'width: ' + 0 + '%'
+        });
+        for(var i=0; i<lbpMatches.length; i++) {
+            for(var j=0; j<cmMatches.length; j++) {
+                if(lbpMatches[i] == cmMatches[j]) {
+                    comboMatches.push(lbpMatches[i]);
+                    var image = "<img src='imageDB/" + lbpMatches[i] + ".jpg' width='25%' height='25%'>";
+                    $("#match-container").append(image);
+                }
+            }  
+        }
+        $("#match-container").removeClass("hidden");
+        
+        console.log({matching: comboMatches});
+        return comboMatches;
+    }
+    $("#match-container").html("");
+    $("#matching-progress-bar").removeClass("hidden");
+    $(".progress-bar-striped").addClass("active");
+    var lbpThresh = 0.55;
+    var cmThresh = 0.13;
+    var img = new Image();
+    img.src = "imageDB/" + imgNum + ".jpg";
+    imgNum++;
+    
+    var compctx = document.getElementById("myCompareCanvas").getContext("2d");
+    img.onload = function(){
+        compctx.canvas.height = img.height;
+        compctx.canvas.width = img.width;       
+        compctx.drawImage(img, 0, 0);
+        
+        dbCM = getColorMoment(compctx);
+        var cmDiff = compareColorMoments(qCM, dbCM);
+        console.log({image: imgNum-1});
+        console.log({cmDifference: cmDiff});
+        var match = true;
+        //console.log({image: imgNum-1});
+        for(var i=0; i<cmDiff.length; i++) {
+            if(cmDiff[i] > cmThresh) {
+                match=false;
+                break;
+            }
+        }
+        if(match) {
+            cmMatches.push(imgNum-1);
+        }
+        
+        
+        convertCanvasToGreyscale(compctx);
+        dbLBP = getLBPHistogram(compctx);
+        var lbpDiff = compareLBPHistograms(qLBP, dbLBP);
+        var matchingCells = 9;
+        
+        console.log({lbpDifference: lbpDiff});
+        
+        for(var i=0; i<lbpDiff.length; i++) {
+            if(lbpDiff[i] > lbpThresh) {
+                matchingCells--;
+            }
+        }
+        if(matchingCells>7) {
+            lbpMatches.push(imgNum-1);
+        }
+        var progress = (imgNum/10).toFixed(0);
         console.log({progress: progress});
         $("#match-bar").attr({
             'aria-valuenow': progress,
             'style': 'width: ' + progress + '%'
         });
-        findColorMatches(ctx, qCM, imgNum, matches);
-    }; 
+        findComboMatches(qLBP, qCM, imgNum, lbpMatches, cmMatches);
+    };
 }
 
 function getColorMoment(ctx) {
@@ -349,9 +435,8 @@ function compareColorMoments(qCM, dbCM) {
         diff = Math.pow(diff,0.5);
         distance[i] = diff;
         totalDist += diff;
-        console.log(distance[i]);
     }
-    console.log({totalDistance: totalDist});
+    //console.log({totalDistance: totalDist});
     return distance;
 }
 

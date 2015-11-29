@@ -27,11 +27,13 @@
                 <select id="filter-type">
                     <option value="lbp">Local Binary Pattern</option>
                     <option value="cm">Color Moment</option>
+                    <option value="both">LBP+CM</option>
                 </select>
                 <button id="load-button" class="btn btn-large btn-primary" onclick="loadImage()">Load</button>
             </div>
             <div id="image-container">
-                <canvas id="myCanvas"></canvas>
+                <canvas id="myCanvas" class="hidden"></canvas>
+                <div id="queried-image"></div>
                 <div id="image-info" class="hidden">
                     <h2>Image Properties:</h2>
                     <p id="image-info-name">ddd</p>
@@ -47,7 +49,7 @@
             <div id="compare-container">
                 <canvas id="myCompareCanvas" class="hidden"></canvas>
             </div>
-            <div id="match-container"></div>
+            <div id="match-container" class="hidden"></div>
         </div>
         <script src='js/jquery-2.1.4.min.js'></script>
         <script src='js/bootstrap.min.js'></script>
