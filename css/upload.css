@@ -18,6 +18,10 @@
     text-align: center;
 }
 
+#queried-image {
+    display: inline-block;
+}
+
 #image-info {
     display:inline-block;
     vertical-align: top;
