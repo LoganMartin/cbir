@@ -35,7 +35,6 @@ function loadImage() {
                 var qLBP = getLBPHistogram(ctx);
                 matches = findComboMatches(qLBP, qCM, 0, matches, cmMatches);
             default:
-                //alert("Error: invalid search filter");
                 break;
         }
         
@@ -192,8 +191,8 @@ function findComboMatches(qLBP, qCM, imgNum, lbpMatches, cmMatches) {
         
         dbCM = getColorMoment(compctx);
         var cmDiff = compareColorMoments(qCM, dbCM);
-        console.log({image: imgNum-1});
-        console.log({cmDifference: cmDiff});
+        //console.log({image: imgNum-1});
+        //console.log({cmDifference: cmDiff});
         var match = true;
         //console.log({image: imgNum-1});
         for(var i=0; i<cmDiff.length; i++) {
@@ -212,7 +211,7 @@ function findComboMatches(qLBP, qCM, imgNum, lbpMatches, cmMatches) {
         var lbpDiff = compareLBPHistograms(qLBP, dbLBP);
         var matchingCells = 9;
         
-        console.log({lbpDifference: lbpDiff});
+        //console.log({lbpDifference: lbpDiff});
         
         for(var i=0; i<lbpDiff.length; i++) {
             if(lbpDiff[i] > lbpThresh) {
@@ -223,7 +222,7 @@ function findComboMatches(qLBP, qCM, imgNum, lbpMatches, cmMatches) {
             lbpMatches.push(imgNum-1);
         }
         var progress = (imgNum/10).toFixed(0);
-        console.log({progress: progress});
+        //console.log({progress: progress});
         $("#match-bar").attr({
             'aria-valuenow': progress,
             'style': 'width: ' + progress + '%'
@@ -237,28 +236,20 @@ function getColorMoment(ctx) {
     var px = imgData.data;
     var height = ctx.canvas.height;
     var width = ctx.canvas.width;
-    var hsv = [], colorMoment = [];
+    var hsv = [];
     var x=0, y=0;
     for(var i=0; i < px.length; i+=4) {
         hsv.push(rgb2hsv(px[i],px[i+1],px[i+2]));
-        
-        //console.log(i + ": " + hsv);
         if(x>=width) {
             x=0;
             y++;
         }
-        
-        
-        
-        //ctx.fillStyle = 'hsl(' + hsv[0] + ',' + hsv[1] + "%," + hsv[2] + "%)";
-        //ctx.fillRect(x,y,1,1);
         x++;
     }
     var means = getColorMeans(hsv);
-    //console.log(means);
     var stdDevs = getColorStdDeviation(hsv, means);
     var skewness = getColorSkewness(hsv, means);
-    colorMoment = means.concat(stdDevs.concat(skewness));
+    var colorMoment = means.concat(stdDevs.concat(skewness));
     return colorMoment;
 }
 
