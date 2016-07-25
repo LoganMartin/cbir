@@ -7,3 +7,5 @@ The user has the option of searching based on the following image features:
 * Color Moment
 * Local Binary Pattern
 * A hybrid of the two
+
+For a much more detailed description of the project, and how it works, see [this write-up.](Writeup.pdf)
